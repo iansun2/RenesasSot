@@ -1,0 +1,7 @@
+string cmd
+# src: "AA"
+# dst: "BB"
+# offset: bool(True: request offset, False: get offset status)
+---
+int32 result 
+# ( < 0: error/not ready)
