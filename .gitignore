@@ -4,5 +4,6 @@ ssh/authorized_keys
 **/log/
 **/install/
 workspace/arm_ws/
+workspace/RobotSot/
 **/core.*
 **/.vscode/

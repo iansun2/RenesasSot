@@ -35,6 +35,8 @@ RUN pip install dynamixel_sdk redis
 RUN apt install -y ssh 
 RUN sed -i 's/^#Port 22/Port 2222/' /etc/ssh/sshd_config
 
+COPY src/tb4_dds.xml /tb4_dds.xml
+
 RUN echo "PS1='\[\033[1;31m\]\u@\[\033[1;34m\]\h\[\033[0m\]:\[\033[1;33m\]\w\[\033[0m\]\$ '" >> /root/.bashrc
 
 COPY entrypoint.sh /entrypoint.sh
