@@ -1,0 +1,43 @@
+FROM arm64v8/ros:humble-perception
+
+RUN apt update
+RUN apt install -y qtwayland5 ros-humble-rqt curl
+RUN apt install -y vim wget git python3-pip gpg tmux
+
+# ================= Other ROS Package ======================
+RUN pip install rosdep
+RUN apt install -y python3-vcstool python3-colcon-common-extensions v4l-utils
+RUN apt install -y ros-humble-rmw-cyclonedds-cpp ros-humble-moveit ros-humble-hardware-interface ros-humble-dynamixel-workbench-toolbox \
+    ros-humble-realsense2-description ros-humble-ros2-controllers ros-humble-ros2-control \
+    ros-humble-controller-manager ros-humble-joint-state-publisher-gui ros-humble-joint-state-publisher \
+    ros-humble-tf-transformations
+RUN apt update && apt install -y ros-humble-slam-toolbox ros-humble-navigation2 ros-humble-nav2-bringup \
+    ros-humble-turtlebot4-description ros-humble-turtlebot4-msgs ros-humble-turtlebot4-node 
+RUN rosdep update  
+
+#================== Dynamixal Motor ====================
+RUN mkdir -p /ros_ws/src
+WORKDIR /ros_ws
+COPY src/dynamixel_control.repos /tmp/dynamixel_control.repos
+RUN vcs import src < /tmp/dynamixel_control.repos
+RUN rosdep install --from-paths src --ignore-src -r -y
+
+#================== Pymoveit2 ====================
+WORKDIR /ros_ws/src
+RUN git clone https://github.com/AndrejOrsula/pymoveit2.git
+RUN rosdep install -y -r -i --rosdistro ${ROS_DISTRO} --from-paths pymoveit2
+WORKDIR /ros_ws
+RUN apt install -y ros-humble-ament-cmake
+RUN bash -c "source /opt/ros/humble/setup.bash && colcon build --merge-install --symlink-install --cmake-args \"-DCMAKE_BUILD_TYPE=Release\""
+
+#================== Other ====================
+RUN pip install dynamixel_sdk redis
+RUN apt install -y ssh 
+RUN sed -i 's/^#Port 22/Port 2222/' /etc/ssh/sshd_config
+
+RUN echo "PS1='\[\033[1;31m\]\u@\[\033[1;34m\]\h\[\033[0m\]:\[\033[1;33m\]\w\[\033[0m\]\$ '" >> /root/.bashrc
+
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["/bin/bash"]

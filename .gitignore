@@ -1,0 +1,8 @@
+docker_old/
+ssh/authorized_keys
+**/build/
+**/log/
+**/install/
+workspace/arm_ws/
+**/core.*
+**/.vscode/
