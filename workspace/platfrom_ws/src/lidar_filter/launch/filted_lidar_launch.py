@@ -25,12 +25,13 @@ ARGUMENTS = [
 
 def generate_launch_description():
     # Lidar node
-    sllidar_launch_file = PathJoinSubstitution([get_package_share_directory('sllidar_ros2'), 'launch', 'sllidar_a2m7_launch.py'])
+    sllidar_launch_file = PathJoinSubstitution([get_package_share_directory('sllidar_ros2'), 'launch', 'sllidar_a1_launch.py'])
     sllidar_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(sllidar_launch_file),
         launch_arguments={
                 'frame_id': LaunchConfiguration('laser_frame'),
-                'serial_port': '/dev/ttyUSB1'
+                'serial_port': '/dev/ttyUSB1',
+                'scan_mode': 'Standard'
             }.items()
     )
 
