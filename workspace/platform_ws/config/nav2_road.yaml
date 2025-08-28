@@ -92,12 +92,12 @@ controller_server:
     general_goal_checker:
       stateful: True
       plugin: "nav2_controller::SimpleGoalChecker"
-      xy_goal_tolerance: 0.02
-      yaw_goal_tolerance: 0.01
+      xy_goal_tolerance: 0.03
+      yaw_goal_tolerance: 0.02
     # RPP parameters
     FollowPath:
       plugin: "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController"
-      desired_linear_vel: 0.26
+      desired_linear_vel: 0.15
       lookahead_dist: 0.2
       min_lookahead_dist: 0.3
       max_lookahead_dist: 0.9
@@ -124,15 +124,15 @@ controller_server:
 local_costmap:
   local_costmap:
     ros__parameters:
-      update_frequency: 5.0
+      update_frequency: 2.0
       publish_frequency: 2.0
       global_frame: odom
       robot_base_frame: base_link
       use_sim_time: True
       rolling_window: true
-      width: 3
-      height: 3
-      resolution: 0.02
+      width: 2
+      height: 2
+      resolution: 0.04
       robot_radius: 0.08
       plugins: ["static_layer", "voxel_layer", "inflation_layer"]
       inflation_layer:
@@ -174,7 +174,7 @@ global_costmap:
       robot_base_frame: base_link
       use_sim_time: True
       robot_radius: 0.08
-      resolution: 0.04
+      resolution: 0.08
       track_unknown_space: true
       plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
       obstacle_layer:

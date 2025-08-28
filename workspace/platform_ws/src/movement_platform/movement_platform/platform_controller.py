@@ -171,6 +171,7 @@ def goal(points: list[GoalPoint | list]):
     navigator.followWaypoints(waypoints)
     # Keep doing stuff as long as the robot is moving towards the goal
     while not navigator.isTaskComplete():
+        time.sleep(0.1)
         pass
     # Do something depending on the return code
     result = navigator.getResult()
@@ -267,7 +268,7 @@ def main():
     global navigator, node
     rclpy.init() 
     node = PlatformNode()
-    node.create_rate(100)
+    node.create_rate(10)
 
     navigator = BasicNavigator()
 
@@ -285,17 +286,16 @@ def main():
     # navigator.setInitialPose(initial_pose)
 
     ## Wait for navigation to fully activate. Use this line if autostart is set to true.
-    node.get_logger().info("wait active")
+    # node.get_logger().info("wait active")
     # navigator.waitUntilNav2Active()
     time.sleep(1)
     node.get_logger().info("active")
 
     # goal_target('init', 'init')
 
-    while True:
+    while rclpy.ok():
         rclpy.spin_once(node)
-
-    exit(0)
+    rclpy.shutdown()
 
 
 if __name__ == '__main__':

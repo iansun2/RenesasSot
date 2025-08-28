@@ -1,0 +1,98 @@
+# example
+# yaw: +X = 0, +Y = 90
+# [point]
+# enter_default = [[x,y,yaw_angle], [x,y,yaw_angle]]
+# enter_left    = [[0,0,90], [1,1,-90]]
+# exit_default  = [[0,0,90], [1,1,-90]]
+# exit_right    = [[0,0,90], [1,1,-90]]
+# exit_var      = [["VAR", 0, 90]]
+
+## Reserved
+# [["FAST_ROTATE"], [-90]]
+
+[test]
+exit_default    = []
+enter_default   = [ [["FAST_ROTATE"], [180]] ]
+
+[current]
+enter_default   = []
+exit_default    = []
+
+[init]
+exit_default    = []
+enter_default   = [ [[0], [0], [0]] ]
+
+[home]
+enter_default   = [ [[-0.02], [-0.01], [180]] ]
+exit_default    = [ [[0], [0], [0]] ]
+
+[left]
+Y               = 0.42
+X               = 0.515
+enter_default   = [ [["X"], ["Y"], [92]] ]
+exit_default    = [ [["FAST_ROTATE"], [-90]] ]
+
+[left_c]
+Y               = 0.685
+X               = 0.52
+enter_default   = [ [["X"], ["Y"], [90]] ]
+exit_default    = [ [["FAST_ROTATE"], [-90]] ]
+
+[top]
+Y               = -0.42
+X               = 0.83
+enter_default   = [ [["X"], ["Y"], [1]] ]
+exit_default    = [ [["FAST_ROTATE"], [-170]] ]
+
+[top_c]
+Y               = -0.415
+X               = 1.115
+enter_default   = [ [["X"], ["Y"], [0]] ]
+exit_default    = [ [["FAST_ROTATE"], [175]] ]
+
+[unload]
+Y               = -0.9
+X               = 0.57
+enter_default   = [ [["X"], ["Y"], [-178]] ]
+# enter_top       = [[["X"], ["Y"], [-90]], [["X"], ["Y"], [180]]]
+# enter_left      = [[["X"], ["Y"], [-90]], [["X"], ["Y"], [180]]]
+# enter_right     = [[["X"], ["Y"], [90]], [["X"], ["Y"], [180]]]
+exit_default    = [ [["FAST_ROTATE"], [90]] ]
+exit_right      = [ [["FAST_ROTATE"], [-90]] ]
+exit_unload     = []
+
+[right]
+Y               = -1.265
+X               = 0.585
+enter_default   = [ [["X"], ["Y"], [-88]] ]
+exit_default    = [ [["FAST_ROTATE"], [90]] ]
+
+[right_c]
+Y               = -1.535
+X               = 0.605
+enter_default   = [ [["X"], ["Y"], [-90]] ]
+exit_default    = [ [["FAST_ROTATE"], [90]] ]
+
+
+[arm_pickup]
+Y               = 0.42
+X               = 0.53
+D               = 91
+enter_init      = [ [["X"], ["Y"], [80]], [["FAST_ROTATE"], ["D"]] ]
+enter_default   = [ [["FAST_ROTATE"], ["D"]] ]
+exit_default    = []
+
+[arm_putdown]
+Y               = 0.42
+X               = 0.53
+enter_default   = [ [["FAST_ROTATE"], [-3]] ] # -5
+exit_default    = []
+
+
+[y_positive]
+enter_default   = [ [["FAST_ROTATE"], [90]] ]
+exit_default    = []
+
+[y_negitive]
+enter_default   = [ [["FAST_ROTATE"], [-90]] ]
+exit_default    = []
