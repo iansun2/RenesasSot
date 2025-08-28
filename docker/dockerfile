@@ -1,7 +1,7 @@
 FROM arm64v8/ros:humble-perception
 
 RUN apt update
-RUN apt install -y qtwayland5 ros-humble-rqt curl
+RUN apt install -y qtwayland5 ros-humble-rqt* curl
 RUN apt install -y vim wget git python3-pip gpg tmux
 
 # ================= Other ROS Package ======================

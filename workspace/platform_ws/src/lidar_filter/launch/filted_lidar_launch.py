@@ -52,7 +52,7 @@ def generate_launch_description():
         output='screen'
     )
 
-    tf_node = Node(
+    tf_debug_node = Node(
         package='tf2_ros',
         executable='static_transform_publisher',
         arguments=[
@@ -79,5 +79,6 @@ def generate_launch_description():
     ld = LaunchDescription(ARGUMENTS)
     ld.add_action(sllidar_launch)
     ld.add_action(tf_node)
+    ld.add_action(tf_debug_node)
     ld.add_action(lidar_filter_node)
     return ld
