@@ -14,7 +14,6 @@ docker run -it -d --name sot \
     --net=host \
     -e XDG_RUNTIME_DIR=/tmp \
 	-e WAYLAND_DISPLAY=$WAYLAND_DISPLAY \
-    -v $XDG_RUNTIME_DIR/wayland-0:/tmp/wayland-0 \
     -v $XDG_RUNTIME_DIR/wayland-1:/tmp/wayland-1 \
 	-e QT_QPA_PLATFORM=wayland \
     -v ${DIR}/workspace:/root/workspace \
@@ -29,3 +28,9 @@ docker run -it -d --name sot \
 # docker run -it -d --name redis \
 #     --net=host \
 #     redis:7.4.1
+
+
+docker run -it --rm -d --name ntp \
+    -p  123:123/udp \
+    --env=NTP_SERVERS="127.127.1.1" \
+    dockurr/chrony
