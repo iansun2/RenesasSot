@@ -20,7 +20,9 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            "main=moveit_control.main:main"
+            "main=moveit_control.main:main",
+            "camera2base=moveit_control.camera2base:main",
+            "redis_test=moveit_control.redis_receive_test:main"
         ],
     },
 )
