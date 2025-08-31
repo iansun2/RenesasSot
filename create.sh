@@ -1,6 +1,5 @@
 #!/bin/bash
 
-# docker pull arm64v8/ros:humble-perception
 export WAYLAND_DISPLAY=wayland-0
 
 docker kill sot
@@ -24,13 +23,3 @@ docker run -it -d --name sot \
     # -v ${DIR}/user_data/local:/root/.local \
     # -v $XDG_RUNTIME_DIR/wayland-0:/tmp/wayland-0 \
     # -v $XDG_RUNTIME_DIR/wayland-1:/tmp/wayland-1 \
-
-# docker run -it -d --name redis \
-#     --net=host \
-#     redis:7.4.1
-
-
-docker run -it --rm -d --name ntp \
-    -p  123:123/udp \
-    --env=NTP_SERVERS="127.127.1.1" \
-    dockurr/chrony

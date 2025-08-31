@@ -7,3 +7,6 @@ workspace/arm_ws/
 workspace/RobotSot/
 **/core.*
 **/.vscode/
+**/__pycache__/
+**/.pyc
+**/.rdb
