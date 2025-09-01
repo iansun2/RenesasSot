@@ -125,7 +125,7 @@ class RedisGrabNode(Node):
                 position = np.array(detection['position'])
                 rotation = np.array(detection['rotation']).reshape(3, 3)
 
-                Rx180 = R.from_euler('x', 180, degrees=True)
+                Rx180 = R.from_euler('xz', [180, 90], degrees=True)
                 quat = (R.from_matrix(rotation) * Rx180).as_quat()
                 self.get_logger().info(f"camera: {position}, {quat}")
                 pose_in_base = self.transfrom_to_base(position, quat)

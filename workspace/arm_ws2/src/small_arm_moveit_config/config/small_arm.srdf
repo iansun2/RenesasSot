@@ -102,6 +102,12 @@
         <joint name="joint5" value="-0.0873"/>
         <joint name="joint6" value="0.7505"/>
     </group_state>
+    <group_state name="gripper_open" group="gripper">
+        <joint name="gripper_joint1" value="-0.2094"/>
+    </group_state>
+    <group_state name="gripper_close" group="gripper">
+        <joint name="gripper_joint1" value="0.0000"/>
+    </group_state>
     <!--END EFFECTOR: Purpose: Represent information about an end effector.-->
     <end_effector name="gripper" parent_link="link6" group="gripper"/>
     <!--PASSIVE JOINT: Purpose: this element is used to mark joints that are not actuated-->

@@ -19,7 +19,7 @@ named_poses = {}
 for group_state in root.findall('group_state'):
     # print(group_state.attrib)
     ## ignore when not small_arm group
-    if group_state.attrib['group'] != 'small_arm':
+    if group_state.attrib['group'] != 'small_arm' and group_state.attrib['group'] != 'gripper':
         continue
     named_pose = {'name':[], 'pose':[]}
     ## read joint
@@ -42,6 +42,14 @@ class NamedGoalService(Node):
             base_link_name="base_link",
             end_effector_name="link6",              
             group_name="small_arm",
+            use_move_group_action=True
+        )
+        self.moveit2_grip = MoveIt2(
+            node=self,
+            joint_names=["gripper_joint1"],
+            base_link_name="base_link",        
+            group_name="gripper",
+            end_effector_name="link6",     
             use_move_group_action=True
         )
         # self.moveit2.planning_time = 10.0
@@ -68,7 +76,10 @@ class NamedGoalService(Node):
             if target_name != "":
                 self.get_logger().info(f"Received named target: {target_name}")
                 named_pose = named_poses[target_name]
-                self.moveit2.move_to_configuration(named_pose['pose'], named_pose['name'])
+                if target_name == "gripper_open" or target_name == "gripper_close":
+                    self.moveit2_grip.move_to_configuration(named_pose['pose'], named_pose['name'])
+                else:
+                    self.moveit2.move_to_configuration(named_pose['pose'], named_pose['name'])
                 # print(self.moveit2.joint_state)
                 response.success = True
                 response.message = f"Execute: {target_name}"
