@@ -4,4 +4,5 @@ ros2 service call /arm_goal_pose python_moveit_interface/srv/PoseRequest "{targe
 ros2 service call /arm_goal_pose python_moveit_interface/srv/PoseRequest "{target_pose: {position: {x: 0.0, y: 0.16, z: 0.22}, orientation: {x: 0.0, y: 0.0, z: 0.0, w: 1.0}}, message: ''}"
 ros2 service call /arm_goal_finish std_srvs/srv/Trigger
 
-ros2 service call /arm_goal_pose python_moveit_interface/srv/PoseRequest "{target_pose: {position: {x: -0.028, y: 0.257, z: 0.1}, orientation: {x: 0.0, y: 0.0, z: 0.0, w: 1.0}}, message: ''}"
+ros2 service call /arm_goal_pose python_moveit_interface/srv/PoseRequest "{target_pose: {position: {x: 0.118, y: 0.221, z: 0.05}, orientation: {x: 0.0, y: 0.0, z: 0.0, w: 1.0}}, message: ''}"
+ros2 run moveit_control grab_test

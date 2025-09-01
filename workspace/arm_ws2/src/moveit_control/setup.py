@@ -22,7 +22,8 @@ setup(
         'console_scripts': [
             "main=moveit_control.main:main",
             "camera2base=moveit_control.camera2base:main",
-            "redis_test=moveit_control.redis_receive_test:main"
+            "redis_test=moveit_control.redis_receive_test:main",
+            "grab_test=moveit_control.grab_test:main"
         ],
     },
 )

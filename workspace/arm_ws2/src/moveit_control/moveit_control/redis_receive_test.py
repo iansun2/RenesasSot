@@ -75,11 +75,14 @@ class RedisGrabNode(Node):
         # Redis connection
         self.rds = redis.Redis(host='127.0.0.1', port=6379, db=0)
         # State
-        self.last_img_id = None
+        self.last_detection_id = None
         self.frame_cnt = 0
         self.last_print = time.time()
         self.tf_node = tf_node
+        # Topic
         self.tf_broadcaster = tf2_ros.TransformBroadcaster(self)
+        self.pose_pub = self.create_publisher(PoseStamped, '/grab_pose', 10)
+        self.get_logger().info("Ready")
     
     def send_pose_as_tf(self, pose: PoseStamped, name: str):
         t = TransformStamped()
@@ -107,12 +110,12 @@ class RedisGrabNode(Node):
         return self.tf_node.listen_and_transform(pose)
 
     def poll_redis(self):
-        img_id = self.rds.get('img_id')
-        if img_id is None:
+        detection_id = self.rds.get('detection_id')
+        if detection_id is None:
             return
         ## new img
-        if img_id != self.last_img_id:
-            self.last_img_id = img_id
+        if detection_id != self.last_detection_id:
+            self.last_detection_id = detection_id
             detections = self.rds.get('detections')
             # Process detections
             detection_obj = json.loads(detections)
@@ -122,11 +125,14 @@ class RedisGrabNode(Node):
                 position = np.array(detection['position'])
                 rotation = np.array(detection['rotation']).reshape(3, 3)
 
-                quat = R.from_matrix(rotation).as_quat()
+                Rx180 = R.from_euler('x', 180, degrees=True)
+                quat = (R.from_matrix(rotation) * Rx180).as_quat()
                 self.get_logger().info(f"camera: {position}, {quat}")
                 pose_in_base = self.transfrom_to_base(position, quat)
                 self.get_logger().info(f"base: {pose_in_base}")
                 self.send_pose_as_tf(pose_in_base, "tag")
+                self.pose_pub.publish(pose_in_base)
+                time.sleep(0.5)
             # FPS counter
             self.frame_cnt += 1
             if time.time() - self.last_print >= 1:
@@ -140,12 +146,12 @@ def main(args=None):
     rclpy.init(args=args)
     tf_node = PoseTransformer()
     node = RedisGrabNode(tf_node)
-    rate = node.create_rate(100)
+    node.create_rate(100)
     while rclpy.ok():
         rclpy.spin_once(tf_node)
         node.poll_redis()
         rclpy.spin_once(node)
-        # rate.sleep()
+        time.sleep(0.01)
     node.destroy_node()
     rclpy.shutdown()
 

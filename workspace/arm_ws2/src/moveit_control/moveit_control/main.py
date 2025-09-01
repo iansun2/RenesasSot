@@ -97,15 +97,14 @@ class NamedGoalService(Node):
 def main(args=None):
     rclpy.init(args=args)
     node = NamedGoalService()
-    rate = node.create_rate(10)
-    # executor = MultiThreadedExecutor()
-    # executor.add_node(node)
-    # executor.spin()
+    node.create_rate(10)
     while rclpy.ok():
+        # node.get_logger().info("running")
         rclpy.spin_once(node)
         if node.moveit2.query_state() != MoveIt2State.IDLE:
+            node.get_logger().info("wait executed")
             node.moveit2.wait_until_executed()
-        rate.sleep()
+        time.sleep(0.1)
     rclpy.shutdown()
 
 if __name__ == '__main__':
