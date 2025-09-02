@@ -11,8 +11,14 @@ find_package(rosidl_default_generators REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
+
+find_package(geometry_msgs REQUIRED)
+
 rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/Command.srv"
+  "srv/GoalRequest.srv"
+  "srv/GoalStatus.srv"
+  DEPENDENCIES geometry_msgs
 )
 
 if(BUILD_TESTING)

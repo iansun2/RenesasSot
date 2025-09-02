@@ -34,9 +34,10 @@ class TfRepublisher(Node):
 def main(args=None):
     rclpy.init(args=args)
     node = TfRepublisher()
-    node.create_rate(20)
+    node.create_rate(50)
     while rclpy.ok():
         rclpy.spin_once(node)
+        time.sleep(0.02)
     node.destroy_node()
     rclpy.shutdown()
 

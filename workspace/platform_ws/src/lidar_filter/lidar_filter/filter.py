@@ -3,7 +3,7 @@ from rclpy.node import Node
 from sensor_msgs.msg import LaserScan
 from transforms3d.euler import quat2euler
 import math as m
-
+import time
 import json
 
 
@@ -28,6 +28,7 @@ class FilterNode(Node):
         current_angle = msg.angle_min
         angle_step = msg.angle_increment
         # print("frmae")
+        # self.get_logger().info(str(msg.ranges[250]))
         for idx in range(len(msg.ranges)):
             if msg.ranges[idx] < 0.16 and msg.ranges[idx] > 0:
                 # print(current_angle)
@@ -41,7 +42,11 @@ def main():
     rclpy.init()
     ## ros node
     node = FilterNode()
-    rclpy.spin(node)
+    node.create_rate(20)
+    while rclpy.ok():
+        rclpy.spin_once(node)
+        time.sleep(0.05)
+    rclpy.shutdown()
 
 
 if __name__ == '__main__':

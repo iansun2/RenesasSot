@@ -1,4 +1,6 @@
 from setuptools import find_packages, setup
+import os
+from glob import glob
 
 package_name = 'moveit_control'
 
@@ -10,6 +12,7 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
+        (os.path.join('share', package_name, 'launch'), glob('launch/*_launch.py')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -22,7 +25,7 @@ setup(
         'console_scripts': [
             "main=moveit_control.main:main",
             "camera2base=moveit_control.camera2base:main",
-            "redis_test=moveit_control.redis_receive_test:main",
+            "redis_receive=moveit_control.redis_receive:main",
             "grab_test=moveit_control.grab_test:main"
         ],
     },

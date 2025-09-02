@@ -269,7 +269,6 @@ def main():
     rclpy.init() 
     node = PlatformNode()
     node.create_rate(10)
-
     navigator = BasicNavigator()
 
     # Set the robot's initial pose if necessary
@@ -295,6 +294,7 @@ def main():
 
     while rclpy.ok():
         rclpy.spin_once(node)
+        time.sleep(0.1)
     rclpy.shutdown()
 
 
