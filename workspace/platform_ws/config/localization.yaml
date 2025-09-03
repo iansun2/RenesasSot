@@ -26,7 +26,7 @@ slam_toolbox:
     min_laser_range: 0.0 # for rastering images
     max_laser_range: 5.0 # for rastering images
     minimum_time_interval: 0.5
-    transform_timeout: 0.2
+    transform_timeout: 0.5
     tf_buffer_duration: 60.
     stack_size_to_use: 40000000 #// program needs a larger stack size to serialize large maps
 
@@ -69,5 +69,5 @@ slam_toolbox:
     min_pass_through: 2 # 2 default
     occupancy_threshold: 0.1 # 0.1 default
     
-    use_sim_time: true
+    # use_sim_time: true
     enable_interactive_mode: true

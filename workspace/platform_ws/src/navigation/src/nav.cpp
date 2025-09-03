@@ -140,6 +140,8 @@ private:
         double angle_to_goal = std::atan2(goal_pose_.position.y - current_pose.position.y,
                                           goal_pose_.position.x - current_pose.position.x);
         double angle_error = normalize_angle(angle_to_goal - current_yaw);
+        RCLCPP_INFO(this->get_logger(), "pos_err(x,y): (%lf, %lf), angle_to_goal: %lf, current_yaw: %lf, angle_error: %lf", 
+            goal_pose_.position.x - current_pose.position.x, goal_pose_.position.y - current_pose.position.y, angle_to_goal, current_yaw, angle_error);
 
         // Check if goal is reached
         if (dist_error < goal_dist_tolerance_)
@@ -171,7 +173,8 @@ private:
                         avoidance_active = true;
                         // Closer points create a stronger repulsive force.
                         // The -sin(angle) term makes the robot turn away from the obstacle.
-                        avoidance_angular_vel += kp_avoidance_ * sin(angle) / (range * range);
+                        auto sign = (angle > 0)? 1.0 : -1.0;
+                        avoidance_angular_vel += sign * kp_avoidance_ * cos(angle) / (range * range);
                     }
                 }
             }
@@ -195,7 +198,7 @@ private:
         if (std::abs(angle_error) < M_PI / 4.0) { // e.g., within 45 degrees
             target_linear_vel = kp_linear_ * dist_error;
         } else {
-            target_linear_vel = 0.0; // Focus on turning first
+            target_linear_vel = 0.01; // Focus on turning first
         }
         target_angular_vel = kp_angular_ * angle_error + avoidance_angular_vel;
         
