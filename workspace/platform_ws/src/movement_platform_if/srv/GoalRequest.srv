@@ -1,3 +1,4 @@
+# GoalRequest.srv
 geometry_msgs/Pose goal_pose
 ---
 bool success

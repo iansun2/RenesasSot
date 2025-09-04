@@ -30,6 +30,14 @@ WORKDIR /ros_ws
 RUN apt install -y ros-humble-ament-cmake
 RUN bash -c "source /opt/ros/humble/setup.bash && colcon build --merge-install --symlink-install --cmake-args \"-DCMAKE_BUILD_TYPE=Release\""
 
+#================== NeoVim ====================
+RUN sudo apt-get install -y build-essential procps curl file git
+RUN /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+RUN echo >> /root/.bashrc && echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"' >> /root/.bashrc
+RUN bash -c "eval \"$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)\" && brew install neovim"
+RUN bash -c "git clone https://github.com/LazyVim/starter ~/.config/nvim"
+RUN bash -c "/home/linuxbrew/.linuxbrew/bin/nvim --headless \"+Lazy! sync\" +qa"
+
 #================== Other ====================
 RUN pip install dynamixel_sdk redis
 RUN apt install -y ssh 

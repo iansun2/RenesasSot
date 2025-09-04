@@ -27,7 +27,7 @@ using namespace movement_platform_if::srv;
 using namespace geometry_msgs::msg;
 using namespace sensor_msgs::msg;
 
-enum class NavState { IDLE, NAVIGATING };
+enum class NavState { IDLE, NAVIGATING, HEADING };
 
 class SimpleNavigator : public rclcpp::Node
 {
@@ -46,6 +46,7 @@ public:
         this->declare_parameter<double>("lidar_fov_deg", 120.0); // "Field of view for lidar-based avoidance in degrees."
         this->declare_parameter<double>("lidar_head_deg", 90.0);
         this->declare_parameter<double>("avoidance_activation_dist", 0.5); //"Distance at which to start obstacle avoidance."
+        this->declare_parameter<double>("final_approach_dist", 0.3);
 
         kp_linear_ = this->get_parameter("kp_linear").as_double();
         kp_angular_ = this->get_parameter("kp_angular").as_double();
@@ -58,7 +59,8 @@ public:
         lidar_fov_rad_ = this->get_parameter("lidar_fov_deg").as_double() * M_PI / 180.0;
         lidar_head_rad_ = this->get_parameter("lidar_head_deg").as_double() * M_PI / 180.0;
         avoidance_activation_dist_ = this->get_parameter("avoidance_activation_dist").as_double();
-        
+        final_approach_dist = this->get_parameter("final_approach_dist").as_double();
+
         // TF listener and buffer
         tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
         tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
@@ -139,14 +141,32 @@ private:
         double current_yaw = tf2::getYaw(current_pose.orientation);
         double angle_to_goal = std::atan2(goal_pose_.position.y - current_pose.position.y,
                                           goal_pose_.position.x - current_pose.position.x);
-        double angle_error = normalize_angle(angle_to_goal - current_yaw);
+        double angle_error = 0;
+        if (state_ == NavState::NAVIGATING) {
+            angle_error = normalize_angle(angle_to_goal - current_yaw);
+        }else if (state_ == NavState::HEADING) {
+            double target_yaw = tf2::getYaw(goal_pose_.orientation);
+            angle_error = normalize_angle(target_yaw - current_yaw);
+        }
         RCLCPP_INFO(this->get_logger(), "pos_err(x,y): (%lf, %lf), angle_to_goal: %lf, current_yaw: %lf, angle_error: %lf", 
             goal_pose_.position.x - current_pose.position.x, goal_pose_.position.y - current_pose.position.y, angle_to_goal, current_yaw, angle_error);
 
+        // Switch avoidance by dist_error
+        bool avoidance_en = true;
+        if (dist_error < final_approach_dist) {
+            avoidance_en = false;
+        }
+
         // Check if goal is reached
-        if (dist_error < goal_dist_tolerance_)
+        if (state_ == NavState::NAVIGATING && dist_error < goal_dist_tolerance_)
         {
             RCLCPP_INFO(this->get_logger(), "Goal reached!");
+            state_ = NavState::HEADING;
+            // stop_robot();
+            // return;
+        // Check if head reached
+        } else if (state_ == NavState::HEADING && std::abs(angle_error) < 0.1) {
+            RCLCPP_INFO(this->get_logger(), "Head reached!");
             state_ = NavState::IDLE;
             stop_robot();
             return;
@@ -154,8 +174,7 @@ private:
 
         // Calculate avoidance velocity from Lidar
         double avoidance_angular_vel = 0.0;
-        bool avoidance_active = false;
-        {
+        if (avoidance_en) {
             std::lock_guard<std::mutex> lock(scan_mutex_);
             if (latest_scan_)
             {
@@ -170,7 +189,6 @@ private:
                     // Check for valid range and if it's close enough to trigger avoidance
                     if (!std::isinf(range) && !std::isnan(range) && range < avoidance_activation_dist_)
                     {
-                        avoidance_active = true;
                         // Closer points create a stronger repulsive force.
                         // The -sin(angle) term makes the robot turn away from the obstacle.
                         auto sign = (angle > 0)? 1.0 : -1.0;
@@ -187,18 +205,16 @@ private:
         double target_linear_vel = 0.0;
         double target_angular_vel = 0.0;
 
-        // if (avoidance_active) {
-        //     RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000, "Obstacle avoidance ACTIVE!");
-        //     target_linear_vel = 0.1; // Creep forward slowly while avoiding
-        //     target_angular_vel = avoidance_angular_vel;
-        // } 
-        
         // Proportional control for goal seeking
         // Only move forward if facing the goal to prevent sideways motion
-        if (std::abs(angle_error) < M_PI / 4.0) { // e.g., within 45 degrees
+        if (state_ == NavState::NAVIGATING && std::abs(angle_error) < M_PI / 4.0) { // e.g., within 45 degrees
             target_linear_vel = kp_linear_ * dist_error;
-        } else {
+        // Turning first
+        } else if (state_ == NavState::NAVIGATING) {
             target_linear_vel = 0.01; // Focus on turning first
+        // Heading mode
+        } else if (state_ == NavState::HEADING) {
+            target_linear_vel = 0;
         }
         target_angular_vel = kp_angular_ * angle_error + avoidance_angular_vel;
         
@@ -258,7 +274,7 @@ private:
     double kp_linear_, kp_angular_, kp_avoidance_;
     double max_linear_vel_, max_angular_vel_;
     double max_linear_accel_, max_angular_accel_;
-    double goal_dist_tolerance_, lidar_fov_rad_, lidar_head_rad_, avoidance_activation_dist_;
+    double goal_dist_tolerance_, lidar_fov_rad_, lidar_head_rad_, avoidance_activation_dist_, final_approach_dist;
     double control_rate_;
 };
 
