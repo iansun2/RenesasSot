@@ -4,11 +4,13 @@ from std_msgs.msg import Int32, String
 from movement_platform_if.srv import GoalRequest, GoalStatus
 import time, yaml, json
 from python_moveit_interface.srv import PoseRequest
-from std_msgs.srv import Trigger
+from std_srvs.srv import Trigger
 from enum import Enum
-from platform_audio import PlatformAudio
-from platform_button import PlatformButton
+# from platform_audio import PlatformAudio
+# from platform_button import PlatformButton
 import math as m
+from geometry_msgs.msg import PoseStamped, Pose
+from tf_transformations import quaternion_from_euler
 
 class ArmStateCmd(Enum):
     INITIAL_POSE        = "home"
@@ -32,8 +34,8 @@ class MainNode(Node):
         self.arm_pose_finish_cli = self.create_client(Trigger, 'arm_goal_finish')
         self.create_subscription(String, "/cube_info", self.cube_info_callback, 2)
         self.create_subscription(Int32, "/speech_recognition", self.speech_recognition_callback, 2)
-        self.audio = PlatformAudio(self)
-        self.button = PlatformButton(self, self.audio)
+        # self.audio = PlatformAudio(self)
+        # self.button = PlatformButton(self, self.audio)
         self.get_logger().info("node init")
         ## Variable
         self.cube_info: List[dict] = []
@@ -43,133 +45,69 @@ class MainNode(Node):
             self.platform_config = yaml.safe_load(file)
 
     def platform_goal(self, dst: PlatformCmd) -> bool:
-        pose_raw = self.platform_config[PlatformCmd.value]
+        pose_raw = self.platform_config[dst.value]
+        quat = quaternion_from_euler(0.0, 0.0, m.radians(pose_raw[2]))
         req = GoalRequest.Request()
         req.goal_pose.position.x = pose_raw[0]
-        req.goal_pose.position.x = pose_raw[1]
-        req.goal_pose.position.x = m.radians(pose_raw[2])
-        self.get_logger().info(f"[Platform] request: {req.cmd}")
+        req.goal_pose.position.y = pose_raw[1]
+        req.goal_pose.orientation.x = quat[0]
+        req.goal_pose.orientation.y = quat[1]
+        req.goal_pose.orientation.z = quat[2]
+        req.goal_pose.orientation.w = quat[3]
+        self.get_logger().info(f"[Platform] request: {req.goal_pose}")
         future = self.platform_goal_request_cli.call_async(req)
         rclpy.spin_until_future_complete(self, future)
-        result = future.request()
+        result = future.result()
         if not result.success:
-            self.get_logger().error(f"platform_goal failed: {result.message}")
+            self.get_logger().error(f"Platform Goal failed: {result.message}")
             return False
+        self.get_logger().info(f"Platform Goal success: {result.message}")
         ## spin until IDLE
         status = 1
-        while status != 1:
+        while status != 0:
             req = GoalStatus.Request()
             future = self.platform_goal_status_cli.call_async(req)
             rclpy.spin_until_future_complete(self, future)
-            result = future.request()
+            result = future.result()
             status = result.status
             time.sleep(0.2)
             
-
-    def arm_(self, command: ArmStateCmd, blocking = True) -> bool:
-        req = ArmControl.Request()
-        req.task_name = command.value
-        self.get_logger().info(f"[Arm] state request: {req.task_name}")
-        future = self.arm_state_ctrl_cli.call_async(req)
-        if blocking:
+    def arm_goal(self, name: str = "", pose: Pose = None):
+        if pose is None:
+            pose = Pose()
+        # Fill request
+        req = PoseRequest.Request()
+        req.target_pose = pose
+        req.message = name
+        future = self.arm_pose_request_cli.call_async(req)
+        rclpy.spin_until_future_complete(self, future)
+        if future.result() is not None:
+            response = future.result()
+            if response.success:
+                self.get_logger().info(f"Arm Goal request success: {response.message}")
+            else:
+                self.get_logger().error(f"Arm Goal request failed: {response.message}")
+        # spin until goal finish
+        while True:
+            req = Trigger.Request()
+            future = self.arm_pose_finish_cli.call_async(req)
             rclpy.spin_until_future_complete(self, future)
             if future.result() is not None:
-                self.get_logger().info(f"[Arm] <Success> Arm state: {command}")
-                return True
-            else:
-                self.get_logger().error(f"[Arm] <Fail> Arm state: {command}")
-                return False
-        else:
-            return True
-
-    def arm_select_text(self, text: str):
-        self.get_logger().info(f"[Arm] Select text: {text}")
-        msg = String()
-        msg.data = text
-        self.arm_text_sel_pub.publish(msg)
-
-    def color_callback(self, msg: String) -> None:
-        self.get_logger().info(f"[Color] Detected: {msg.data}")
-
-
-    def text_callback(self, msg: String) -> None:
-        # self.get_logger().info(f"[Text] Detected: {msg.data}") 
-        # self.text_detect_buffer.append(msg.data)
-        # if(len(self.text_detect_buffer) >= 3):
-        #     compare = self.text_detect_buffer[0]
-        #     ## compare buffered text, return when not match
-        #     for text_detect in self.text_detect_buffer:
-        #         if compare != text_detect:
-        #             return
-        #     self.text_detect_buffer = []
-        # ## sample not enough
-        # else:
-        #     return
-        # ## set filted text
-        self.current_text = msg.data
-
-    def update_text_info(self, level: PlatformCmd = PlatformCmd.INIT, put: bool = False, failed: bool = False) -> str:
-        '''
-            call put=False after arm detect pose, will store current_level_text and set info to level\n
-            call put=True after arm put_down pose, will pop current_level_text and set info to unload\n
-            call put=True and failed=True when grab failed, will pop current level_text and set info to failed\n
-            return first char of current_text
-        '''
-        self.get_logger().info(f"current text: {self.current_text}")
-        self.get_logger().info(f"before current level: {self.current_level_text}")
-        return_char = ""
-        ## grab mode
-        if not put:
-            ## set current_level_text
-            self.current_level_text = self.current_text
-            ## set text_info to current_level_text
-            for c in self.current_level_text:
-                ## only update not failed char
-                if self.text_info[c] != PlatformCmd.FAILED:
-                    self.text_info[c] = level
-                    print(f"update char: {c}")
-                    ## set return char when not set
-                    if return_char == "":
-                        print(f"set return char: {return_char}")
-                        return_char = c
-        ## put mode
-        elif self.current_level_text != "":
-            if len(self.current_level_text):
-                ## pop from current_level_text
-                c = self.current_level_text[0]
-                self.current_level_text = self.current_level_text[1:]
-                ## set pop char in text_info's state 
-                if not failed:
-                    self.text_info[c] = level
+                response = future.result()
+                if response.success:
+                    break
                 else:
-                    self.text_info[c] = PlatformCmd.FAILED
-                return_char = c
-            else:
-                self.get_logger().error("(update text info): current level text is empty")
-        self.get_logger().info(f"after current level: {self.current_level_text}")
-        self.get_logger().info(f"text info: {self.text_info}")
-        self.get_logger().info(f"first char: {return_char}")
-        return return_char
-    
-    def is_text_exist(self, text: str) -> bool:
-        return text in self.current_text
+                    pass
+                    # self.get_logger().info(f"status: {response.message}")
+            time.sleep(0.2)
 
-    def is_level_text_empty(self) -> bool:
-        '''
-            True: current level text is empty
-        '''
-        print(f"current level text count: {len(self.current_level_text)}")
-        return len(self.current_level_text) == 0
 
-    def is_task_finish(self) -> bool:
-        '''
-            all text in unload
-        '''
-        end_condi = [PlatformCmd.UNLOAD, PlatformCmd.FAILED]
-        return self.text_info['F'] in end_condi \
-            and self.text_info['I'] in end_condi \
-            and self.text_info['R'] in end_condi \
-            and self.text_info['A'] in end_condi
+    def cube_info_callback(self, msg: String) -> None:
+        pass
+        # self.get_logger().info(f"[Color] Detected: {msg.data}")
+
+    def speech_recognition_callback(self, msg: Int32) -> None:
+        self.speech_recognition = msg.data
 
 
 def spin_for_time(node: Node, sec: float) -> None:
@@ -234,50 +172,16 @@ def main():
     task_finish = False
 
     ## init
-    node.arm_state_request(ArmStateCmd.INITIAL_POSE)
-    node.platform_request(PlatformCmd.INIT)
-    node.audio.beep_ready()
-    node.button.wait_until_start()
-    node.arm_state_request(ArmStateCmd.DETECT_POSE)
+    node.platform_goal(PlatformCmd.HOME)
+    # node.audio.beep_ready()
+    # node.button.wait_until_start()
+    time.sleep(1)
+  
     for task in tasks:
-        ## go to task point
-        node.platform_request(task)
-        ## loop
-        while True:
-            ## Detect
-            node.arm_state_request(ArmStateCmd.DETECT_POSE)
-            spin_for_time(node, 1)
-            operation_char = node.update_text_info(level = task)
-            ## has text in this level
-            if operation_char != "":
-                grab_succ = try_grab_up(node, operation_char)
-                ## grab success
-                if grab_succ:
-                    ## Unload
-                    node.platform_request(PlatformCmd.UNLOAD)
-                    if not node.unload_offseted:
-                        offset_unload(node)
-                    putdown_succ = try_putdown(node, operation_char)
-                    node.update_text_info(level = PlatformCmd.UNLOAD, put = True)
-                ## grab failed
-                else:
-                    node.get_logger().warn(f"grab up: {operation_char} failed")
-                    node.update_text_info(put = True, failed = True)
-            ## finish when all text at unload
-            if node.is_task_finish():
-                task_finish = True
-                break
-            ## this level finish
-            if node.is_level_text_empty():
-                break
-            ## back to level
-            node.platform_request(task)
-        ## finish
-        if task_finish:
-            break
-    ## home
-    node.arm_state_request(ArmStateCmd.INITIAL_POSE, blocking = False)
-    node.platform_request(PlatformCmd.HOME)
+        node.platform_goal(task)
+        time.sleep(1)
+
+    node.platform_goal(PlatformCmd.HOME)
 
 
 if __name__ == '__main__':

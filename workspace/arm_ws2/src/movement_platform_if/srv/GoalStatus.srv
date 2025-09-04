@@ -1,0 +1,6 @@
+# GoalStatus.srv
+---
+int32 status
+# 0: Idle
+# 1: Navigating
+# 2: Heading

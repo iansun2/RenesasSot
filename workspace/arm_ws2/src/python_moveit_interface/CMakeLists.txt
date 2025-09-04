@@ -8,7 +8,6 @@ find_package(std_msgs REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/PoseRequest.srv"
-  "srv/PoseTransform.srv"
   DEPENDENCIES geometry_msgs std_msgs
 )
 
