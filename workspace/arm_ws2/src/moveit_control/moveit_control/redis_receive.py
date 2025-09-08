@@ -133,9 +133,9 @@ class RedisReceive(Node):
 
                 Rx180 = R.from_euler("xz", [180, 90], degrees=True)
                 quat = (R.from_matrix(rotation) * Rx180).as_quat()
-                self.get_logger().info(f"camera: {position}, {quat}")
+                self.get_logger().info(f"camera: {id},  {position}, {quat}")
                 pose_in_base = self.transfrom_to_base(position, quat)
-                self.get_logger().info(f"base: {pose_in_base.pose}")
+                #self.get_logger().info(f"base: {pose_in_base.pose}")
                 self.pose_pub.publish(pose_in_base)
                 position = pose_in_base.pose.position
                 orientation = pose_in_base.pose.orientation

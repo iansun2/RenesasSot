@@ -61,12 +61,13 @@ class MainNode(Node):
         # Variable
         self.cube_pose: dict = {}
         self.cube_status: dict = {
-            0: PlatformCmd.HOME,
-            1: PlatformCmd.HOME,
-            2: PlatformCmd.HOME,
-            3: PlatformCmd.HOME,
+            '0': PlatformCmd.HOME,
+            '1': PlatformCmd.HOME,
+            '2': PlatformCmd.HOME,
+            '3': PlatformCmd.HOME,
         }
         self.speech_recognition: int = None
+        self.camera_drop:int = 0
         # Config
         with open("platform.yaml", "r") as file:
             self.platform_config = yaml.safe_load(file)
@@ -130,27 +131,46 @@ class MainNode(Node):
             time.sleep(0.2)
 
     def cube_pose_json_callback(self, msg: String) -> None:
+        self.camera_drop -= 1
+        if self.camera_drop >= 0:
+            self.cube_pose = {}
+            return
         self.cube_pose = json.loads(msg.data)
 
     def speech_recognition_callback(self, msg: Int32) -> None:
         self.speech_recognition = msg.data
 
-    def update_cube_status_from_camera(self, platform_locate: PlatformCmd):
+    def update_cube_status_from_camera(self, platform_locate: PlatformCmd, drop: int):
         self.redis_ctrl.set_captur_en(True)
-        spin_for_time(self, 1)
+        self.spin_until_camera_drop(drop)
         for id in self.cube_pose:
-            if self.cube_info[id] != PlatformCmd.UNLOAD:
+            if self.cube_status[id] != PlatformCmd.UNLOAD:
                 self.cube_status[id] = platform_locate
         self.redis_ctrl.set_captur_en(False)
 
-    def set_cube_status_finish(self, id: int) -> None:
+    def spin_until_camera_drop(self, drop: int, timeout: float = 5) -> bool:
+        succ = True
+        self.cube_pose = {}
+        self.camera_drop = drop
+        self.redis_ctrl.set_captur_en(True)
+        st = time.time()
+        while self.camera_drop >= 0:
+            rclpy.spin_once(self)
+            time.sleep(0.1)
+            if time.time() - st >= timeout:
+                succ = False
+                break
+        self.redis_ctrl.set_captur_en(False)
+        return succ
+
+    def set_cube_status_finish(self, id: str) -> None:
         self.cube_status[id] = PlatformCmd.UNLOAD
 
-    def get_cube_status(self, id: int) -> PlatformCmd:
+    def get_cube_status(self, id: str) -> PlatformCmd:
         return self.cube_status[id]
 
-    def get_cube_pose(self, id: int) -> Pose | None:
-        if not id in self.cube_pose:
+    def get_cube_pose(self, id: str) -> Pose | None:
+        if id not in self.cube_pose:
             return None
         info = self.cube_pose[id]
         pose = Pose()
@@ -161,7 +181,21 @@ class MainNode(Node):
         pose.orientation.y = info[4]
         pose.orientation.z = info[5]
         pose.orientation.w = info[6]
-        return pose
+        return self.pose_compensate(pose)
+    
+    def spin_until_cube_pose(self, id: str, drop: int, timeout: float) -> bool:
+        succ = True
+        self.spin_until_camera_drop(drop)
+        self.redis_ctrl.set_captur_en(True)
+        st = time.time()
+        while id not in self.cube_pose:
+            rclpy.spin_once(self)
+            time.sleep(0.1)
+            if time.time() - st >= timeout:
+                succ = False
+                break
+        self.redis_ctrl.set_captur_en(False)
+        return succ
 
     def spin_until_speech_cmd(self) -> int:
         while self.speech_recognition is None:
@@ -170,6 +204,16 @@ class MainNode(Node):
         ret = self.speech_recognition
         self.speech_recognition = None
         return ret
+
+    def pose_compensate(self, pose: Pose) -> Pose:
+        distance = (pose.position.x**2 + pose.position.y**2) ** 0.5
+        pose.position.x *= 1.07
+        pose.position.y *= 1.13
+        pose.position.x -= 0.015
+        # msg.pose.position.y += 0.02
+        pose.position.z += 0.17
+        pose.position.z += (distance - 0.19) * 0.2
+        return pose
 
 
 def grab_up(node: MainNode, pose: Pose):
@@ -199,17 +243,20 @@ def main():
     platform_points = [PlatformCmd.LEFT, PlatformCmd.TOP, PlatformCmd.RIGHT]
 
     # init
+    node.get_logger().info("Start in 3 sec")
     node.redis_ctrl.set_captur_en(False)
+    time.sleep(3)
     node.arm_goal(name="home")
     node.platform_goal(PlatformCmd.HOME)
     node.arm_goal(name="detect")
     # node.audio.beep_ready()
     # node.button.wait_until_start()
     time.sleep(1)
+    node.get_logger().info("Ready to receive command")
 
-    node.speech_recognition = 2
+    # node.speech_recognition = 2
     while rclpy.ok():
-        target_cube = node.spin_until_speech_cmd() - 2  # map (1,5) to (-1,3)
+        target_cube = str(node.spin_until_speech_cmd() - 2)  # map (1,5) to (-1,3)
         cube_status = node.get_cube_status(target_cube)
         skip_move = False
         # cube is finished
@@ -222,7 +269,7 @@ def main():
             # platform go to each point to find cube
             for point in platform_points:
                 node.platform_goal(point)
-                node.update_cube_status_from_camera(point)
+                node.update_cube_status_from_camera(point, 5)
                 cube_status = node.get_cube_status(target_cube)
                 if cube_status != PlatformCmd.HOME:
                     break
@@ -235,21 +282,22 @@ def main():
             # platform move to cube
             if not skip_move:
                 node.platform_goal(cube_status)
-                node.update_cube_status_from_camera(cube_status)
+                node.update_cube_status_from_camera(cube_status, 5)
             # grab up
             pose = node.get_cube_pose(target_cube)
             grab_up(node, pose)
             # platform move to unload
             node.platform_goal(PlatformCmd.UNLOAD)
             # put down
-            node.redis_ctrl.set_captur_en(True)
-            spin_for_time(node, 1)
-            node.redis_ctrl.set_captur_en(False)
+            if not node.spin_until_cube_pose(target_cube, 5, 5):
+                node.get_logger().error("failed to get put down pose")
+                break
             pose = node.get_cube_pose(target_cube)
             put_down(node, pose)
             # update cube status
             node.set_cube_status_finish(target_cube)
     node.get_logger().info("all down")
+    node.arm_goal(name='top')
     node.arm_goal(name="home")
     node.platform_goal(PlatformCmd.HOME)
 
