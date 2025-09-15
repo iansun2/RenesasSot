@@ -59,7 +59,8 @@ class NamedGoalService(Node):
 
     def handle_goal_finish(self, request, response):
         status = self.moveit2.query_state()
-        if status != MoveIt2State.IDLE:
+        status_grip = self.moveit2_grip.query_state()
+        if status != MoveIt2State.IDLE or status_grip != MoveIt2State.IDLE:
             response.success = False
             response.message = str(status)
             self.get_logger().info(f"Goal still running: {status}")
@@ -115,6 +116,9 @@ def main(args=None):
         if node.moveit2.query_state() != MoveIt2State.IDLE:
             node.get_logger().info("wait executed")
             node.moveit2.wait_until_executed()
+        if node.moveit2_grip.query_state() != MoveIt2State.IDLE:
+            node.get_logger().info("grip wait executed")
+            node.moveit2_grip.wait_until_executed()
         time.sleep(0.1)
     rclpy.shutdown()
 

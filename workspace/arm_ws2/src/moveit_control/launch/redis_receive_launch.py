@@ -42,7 +42,6 @@ def generate_launch_description():
         output='screen'
     )
 
-
     # Redis node
     redis_node = Node(
         package='moveit_control',
@@ -50,8 +49,16 @@ def generate_launch_description():
         output='screen'
     )
 
+    # Moveit node
+    moveit_node = Node(
+        package='moveit_control',
+        executable='main',
+        output='screen'
+    )
+
 
     ld = LaunchDescription(ARGUMENTS)
     ld.add_action(tf_node)
     ld.add_action(redis_node)
+    ld.add_action(moveit_node)
     return ld

@@ -1,5 +1,5 @@
 #!/bin/bash
-
+./set_ip.sh
 wpa_supplicant -Dwext -iwlan0 -c/etc/wpa_supplicant.conf
 
 # sleep 10;

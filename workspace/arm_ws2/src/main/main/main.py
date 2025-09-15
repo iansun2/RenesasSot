@@ -247,6 +247,41 @@ def main():
     node.redis_ctrl.set_captur_en(False)
     time.sleep(3)
     node.arm_goal(name="home")
+    node.arm_goal(name="detect")
+
+    while rclpy.ok():
+        node.get_logger().info("Ready to receive command")
+        target_cube = str(node.spin_until_speech_cmd() - 2)  # map (1,5) to (-1,3)
+        cube_status = node.get_cube_status(target_cube)
+        # need to grab
+        if cube_status != PlatformCmd.UNLOAD:
+            # grab up
+            if not node.spin_until_cube_pose(target_cube, 5, 5):
+                node.get_logger().error("failed to get grab up pose")
+                break 
+            pose = node.get_cube_pose(target_cube)
+            grab_up(node, pose)
+            # put down
+            if not node.spin_until_cube_pose(target_cube, 5, 5):
+                node.get_logger().error("failed to get put down pose")
+                break
+            pose = node.get_cube_pose(target_cube)
+            put_down(node, pose)
+    node.get_logger().info("end")
+
+
+def main2():
+    rclpy.init()
+    node = MainNode()
+    node.create_rate(100)
+
+    platform_points = [PlatformCmd.LEFT, PlatformCmd.TOP, PlatformCmd.RIGHT]
+
+    # init
+    node.get_logger().info("Start in 3 sec")
+    node.redis_ctrl.set_captur_en(False)
+    time.sleep(3)
+    node.arm_goal(name="home")
     node.platform_goal(PlatformCmd.HOME)
     node.arm_goal(name="detect")
     # node.audio.beep_ready()
