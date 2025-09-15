@@ -16,7 +16,7 @@
         <joint name="joint4"/>
         <joint name="joint5"/>
         <joint name="joint6"/>
-        <chain base_link="base_link" tip_link="link6"/>
+        <chain base_link="base_arm" tip_link="link6"/>
     </group>
     <group name="gripper">
         <joint name="gripper_joint1"/>
@@ -113,7 +113,7 @@
     <!--PASSIVE JOINT: Purpose: this element is used to mark joints that are not actuated-->
     <passive_joint name="gripper_joint2"/>
     <!--DISABLE COLLISIONS: By default it is assumed that any link of the robot could potentially come into collision with any other link in the robot. This tag disables collision checking between a specified pair of links. -->
-    <disable_collisions link1="base_link" link2="link1" reason="Adjacent"/>
+    <disable_collisions link1="base_arm" link2="link1" reason="Adjacent"/>
     <disable_collisions link1="camera_link" link2="link4" reason="Never"/>
     <disable_collisions link1="camera_link" link2="link5" reason="Adjacent"/>
     <disable_collisions link1="camera_link" link2="link6" reason="Never"/>

@@ -1,4 +1,5 @@
 #!/bin/bash
+source /opt/ros/humble/setup.bash
 source ./install/setup.bash
 
 # export CYCLONEDDS_URI=/tb4_dds.xml

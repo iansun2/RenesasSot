@@ -10,13 +10,13 @@
   <!-- <xacro:include filename="$(find SMW-G02_urdf_description)/urdf/SMW-G02_urdf.trans" />
   <xacro:include filename="$(find SMW-G02_urdf_description)/urdf/SMW-G02_urdf.gazebo" /> -->
   <link name="world"/>
-  <joint name="origin_to_base_link" type="fixed">
+  <joint name="origin_to_base_arm" type="fixed">
     <origin rpy="0 0 0" xyz="0 0 0"/>
     <parent link="world"/>
-    <child link="base_link"/>
+    <child link="base_arm"/>
     <axis xyz="0 0 0"/>
   </joint>
-  <link name="base_link">
+  <link name="base_arm">
     <inertial>
       <origin rpy="0 0 0" xyz="-0.0002999964758485541 -0.01002821324623266 0.02805569132780727"/>
       <mass value="1.29137439344346"/>
@@ -218,7 +218,7 @@
   </link>
   <joint name="joint1" type="revolute">
     <origin rpy="0 0 0" xyz="-0.0003 4.1e-05 0.053"/>
-    <parent link="base_link"/>
+    <parent link="base_arm"/>
     <child link="link1"/>
     <axis xyz="-0.0 -0.0 1.0"/>
     <limit effort="1" lower="-3.14" upper="3.14" velocity="4.8"/>

@@ -5,9 +5,9 @@
   <!-- <xacro:include filename="$(find SMW-G02_urdf_description)/urdf/SMW-G02_urdf.trans" />
   <xacro:include filename="$(find SMW-G02_urdf_description)/urdf/SMW-G02_urdf.gazebo" /> -->
 
-  <xacro:macro name="small_arm" params="parent base_name:=base_link *origin">
+  <xacro:macro name="small_arm" params="parent base_name:=base_arm *origin">
 
-  <joint name="origin_to_base_link" type="fixed">
+  <joint name="origin_to_base_arm" type="fixed">
     <xacro:insert_block name="origin" />
     <parent link="${parent}" />
     <child link="${base_name}" />

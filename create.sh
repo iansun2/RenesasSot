@@ -17,6 +17,7 @@ docker run -it -d --name sot \
 	-e QT_QPA_PLATFORM=wayland \
     -v ${DIR}/workspace:/root/workspace \
     -v ${DIR}/ssh/:/root/.ssh \
+    -v /dev/serial/:/dev/serial \
     renesas_sot
 
     # -v ${DIR}/user_data/pip-packages:/usr/local/lib/python3.10/dist-packages \
