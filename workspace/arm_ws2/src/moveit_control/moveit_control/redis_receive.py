@@ -28,11 +28,15 @@ class PoseTransformer(Node):
             src_mat = self.pose_to_matrix(src_pose)
             # Get transform link6 -> base_link
             # link6_base_tf = self.tf_buffer.lookup_transform(target_frame = "base_link", source_frame = "camera", time = src_pose.header.stamp)
-            link6_base_tf = self.tf_buffer.lookup_transform(
-                target_frame="base_link", source_frame="camera", time=rclpy.time.Time()
+            #link6_base_tf = self.tf_buffer.lookup_transform(
+            #    target_frame="base_link", source_frame="camera", time=rclpy.time.Time()
+            #)
+            #link6_base_mat = self.tf_to_matrix(link6_base_tf)
+            T_cam_base = np.dot(
+                tf_transformations.translation_matrix([-0.00013807144901078946, 0.17668304508742544, 0.2615420050909273]),
+                tf_transformations.quaternion_matrix([0.9997942354691138, -0.0034103228221833283, 0.001433961791665533, 0.019944928542328964]),
             )
-            link6_base_mat = self.tf_to_matrix(link6_base_tf)
-            pose_in_base_matrix = link6_base_mat @ src_mat
+            pose_in_base_matrix = T_cam_base @ src_mat
             return self.matrix_to_pose(pose_in_base_matrix, src_pose.header)
         except Exception as e:
             self.get_logger().warn(f"Transform failed: {str(e)}")
@@ -109,7 +113,7 @@ class RedisReceive(Node):
         pose.pose.orientation.y = quat[1]
         pose.pose.orientation.z = quat[2]
         pose.pose.orientation.w = quat[3]
-        self.send_pose_as_tf(pose, "tag_cam")
+        # self.send_pose_as_tf(pose, "tag_cam")
         # self.get_logger().info(f"send req: {pose}")
         return self.tf_node.listen_and_transform(pose)
 
@@ -136,7 +140,7 @@ class RedisReceive(Node):
                 self.get_logger().info(f"camera: {id},  {position}, {quat}")
                 pose_in_base = self.transfrom_to_base(position, quat)
                 #self.get_logger().info(f"base: {pose_in_base.pose}")
-                self.pose_pub.publish(pose_in_base)
+                #self.pose_pub.publish(pose_in_base)
                 position = pose_in_base.pose.position
                 orientation = pose_in_base.pose.orientation
                 output[id] = [
@@ -170,6 +174,7 @@ def main(args=None):
     node.create_rate(20)
     while rclpy.ok():
         rclpy.spin_once(tf_node)
+        # node.get_logger().info(f"cam2base: {node.tf_node.listen_and_transform(PoseStamped())}")
         node.poll_redis()
         rclpy.spin_once(node)
         time.sleep(0.05)

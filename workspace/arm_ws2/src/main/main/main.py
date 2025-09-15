@@ -103,7 +103,6 @@ class MainNode(Node):
     def arm_goal(self, name: str = "", pose: Pose = None):
         if pose is None:
             pose = Pose()
-        self.get_logger().info("arm goal request")
         # Fill request
         req = PoseRequest.Request()
         req.target_pose = pose
@@ -116,6 +115,7 @@ class MainNode(Node):
                 self.get_logger().info(f"Arm Goal request success: {response.message}")
             else:
                 self.get_logger().error(f"Arm Goal request failed: {response.message}")
+        time.sleep(2)
         # spin until goal finish
         while True:
             req = Trigger.Request()
@@ -124,6 +124,7 @@ class MainNode(Node):
             if future.result() is not None:
                 response = future.result()
                 if response.success:
+                    self.get_logger().info("Arm Goal finish")
                     break
                 else:
                     pass

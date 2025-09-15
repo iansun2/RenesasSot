@@ -55,6 +55,7 @@ class NamedGoalService(Node):
         # self.moveit2.planning_time = 10.0
         # self.moveit2.max_velocity = 1.0
         # self.moveit2.max_acceleration = 1.0
+        self.goal_pose_pending = None
         self.get_logger().info("MoveIt2 interface initialized.")
 
     def handle_goal_finish(self, request, response):
@@ -86,16 +87,12 @@ class NamedGoalService(Node):
                 response.message = f"Execute: {target_name}"
             else:
                 self.get_logger().info(f"Received pose: {target_pose}")
-                self.moveit2.move_to_pose(
-                    position=target_pose.position,
-                    quat_xyzw=target_pose.orientation,
-                    frame_id="base_link",             # Reference frame
-                    tolerance_position=0.001,         # Position tolerance
-                    tolerance_orientation=0.001,      # Orientation tolerance
-                    # cartesian=cartesian,
-                    # cartesian_max_step=cartesian_max_step,
-                    # cartesian_fraction_threshold=cartesian_fraction_threshold,
-                )
+                self.goal_pose_pending = target_pose
+                #joint_state = self.moveit2.compute_ik(
+                #    position=[target_pose.position.x, target_pose.position.y, target_pose.position.z],
+                #    quat_xyzw=[target_pose.orientation.x, target_pose.orientation.y, target_pose.orientation.z, target_pose.orientation.w]
+                #)
+                #self.moveit2.move_to_configuration(joint_state.position, joint_state.name)
                 response.success = True
                 response.message = f"Execute: {target_pose}"
         except Exception as e:
@@ -113,6 +110,15 @@ def main(args=None):
     while rclpy.ok():
         # node.get_logger().info("running")
         rclpy.spin_once(node)
+        if node.goal_pose_pending is not None:
+            target_pose = node.goal_pose_pending
+            joint_state = node.moveit2.compute_ik(
+                position=[target_pose.position.x, target_pose.position.y, target_pose.position.z],
+                quat_xyzw=[target_pose.orientation.x, target_pose.orientation.y, target_pose.orientation.z, target_pose.orientation.w]
+            )
+            if joint_state:
+                node.moveit2.move_to_configuration(joint_state.position, joint_state.name)
+            node.goal_pose_pending = None
         if node.moveit2.query_state() != MoveIt2State.IDLE:
             node.get_logger().info("wait executed")
             node.moveit2.wait_until_executed()

@@ -8,6 +8,7 @@ from launch.actions import (
     IncludeLaunchDescription,
 )
 from ament_index_python.packages import get_package_share_directory
+from moveit_configs_utils import MoveItConfigsBuilder
 
 
  # Declare arguments for transform parameters
@@ -49,11 +50,25 @@ def generate_launch_description():
         output='screen'
     )
 
+    moveit_config = (
+        MoveItConfigsBuilder("small_arm" , package_name="small_arm_moveit_config")
+        #.robot_description(file_path="config/small_arm.urdf.xacro")
+        .robot_description_semantic(file_path="config/small_arm.srdf")
+        #.trajectory_execution(file_path="config/moveit_controllers.yaml")
+        #.planning_pipelines(pipelines=["ompl", "pilz_industrial_motion_planner"])
+        .moveit_cpp(file_path="config/moveit_cpp.yaml")
+        .to_moveit_configs()
+    )
+
+
     # Moveit node
     moveit_node = Node(
         package='moveit_control',
         executable='main',
-        output='screen'
+        output='screen',
+        #parameters=[
+        #    moveit_config.to_dict()
+        #]
     )
 
 
