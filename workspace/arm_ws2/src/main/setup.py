@@ -21,6 +21,7 @@ setup(
     entry_points={
         'console_scripts': [
             'main=main.main:main',
+            'main_full=main.main:main2',
             'speech=main.speech:main'
         ],
     },

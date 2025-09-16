@@ -56,18 +56,32 @@ class NamedGoalService(Node):
         # self.moveit2.max_velocity = 1.0
         # self.moveit2.max_acceleration = 1.0
         self.goal_pose_pending = None
+        self.goal_type = 0 # 0: arm, 1: gripper
+        self.ik_failed = False
         self.get_logger().info("MoveIt2 interface initialized.")
 
     def handle_goal_finish(self, request, response):
         status = self.moveit2.query_state()
         status_grip = self.moveit2_grip.query_state()
-        if status != MoveIt2State.IDLE or status_grip != MoveIt2State.IDLE:
+        if self.ik_failed:
+            response.success = True
+            response.message = "ik"
+            self.get_logger().error("IK failed")
+        elif status != MoveIt2State.IDLE or status_grip != MoveIt2State.IDLE:
             response.success = False
-            response.message = str(status)
+            # response.message = str(status)
             self.get_logger().info(f"Goal still running: {status}")
         else:
             response.success = True
-            self.get_logger().info("Goal finish")
+            if self.goal_type == 0:
+                error_code = self.moveit2.get_last_execution_error_code()
+            else:
+                error_code = self.moveit2_grip.get_last_execution_error_code()
+            if error_code.val != 1:
+                response.message = str(error_code.val)
+            else:
+                response.message = ""
+            self.get_logger().info(f"Goal finish: {error_code.val}")
         return response
 
 
@@ -75,19 +89,23 @@ class NamedGoalService(Node):
         target_name = request.message
         target_pose = request.target_pose
         try:
+            self.ik_failed = False
             if target_name != "":
                 self.get_logger().info(f"Received named target: {target_name}")
                 named_pose = named_poses[target_name]
                 if target_name == "gripper_open" or target_name == "gripper_close":
                     self.moveit2_grip.move_to_configuration(named_pose['pose'], named_pose['name'])
+                    self.goal_type = 1
                 else:
                     self.moveit2.move_to_configuration(named_pose['pose'], named_pose['name'])
+                    self.goal_type = 0
                 # print(self.moveit2.joint_state)
                 response.success = True
                 response.message = f"Execute: {target_name}"
             else:
                 self.get_logger().info(f"Received pose: {target_pose}")
                 self.goal_pose_pending = target_pose
+                self.goal_type = 0
                 #joint_state = self.moveit2.compute_ik(
                 #    position=[target_pose.position.x, target_pose.position.y, target_pose.position.z],
                 #    quat_xyzw=[target_pose.orientation.x, target_pose.orientation.y, target_pose.orientation.z, target_pose.orientation.w]
@@ -118,6 +136,8 @@ def main(args=None):
             )
             if joint_state:
                 node.moveit2.move_to_configuration(joint_state.position, joint_state.name)
+            else:
+                node.ik_failed = True
             node.goal_pose_pending = None
         if node.moveit2.query_state() != MoveIt2State.IDLE:
             node.get_logger().info("wait executed")

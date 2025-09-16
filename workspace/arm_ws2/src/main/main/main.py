@@ -100,7 +100,8 @@ class MainNode(Node):
             status = result.status
             time.sleep(0.2)
 
-    def arm_goal(self, name: str = "", pose: Pose = None):
+    def arm_goal(self, name: str = "", pose: Pose = None) -> bool:
+        self.get_logger().info("arm goal start")
         if pose is None:
             pose = Pose()
         # Fill request
@@ -125,7 +126,10 @@ class MainNode(Node):
                 response = future.result()
                 if response.success:
                     self.get_logger().info("Arm Goal finish")
-                    break
+                    if response.message == "":
+                        return True
+                    else:
+                        return False
                 else:
                     pass
                     # self.get_logger().info(f"status: {response.message}")
@@ -207,31 +211,41 @@ class MainNode(Node):
         return ret
 
     def pose_compensate(self, pose: Pose) -> Pose:
+        # X: Right, Y: Front, Z: Up
         distance = (pose.position.x**2 + pose.position.y**2) ** 0.5
-        pose.position.x *= 1.07
-        pose.position.y *= 1.13
-        pose.position.x -= 0.015
-        # msg.pose.position.y += 0.02
-        pose.position.z += 0.17
+        pose.position.z += 0.12
+        pose.position.x -= 0.01
+        pose.position.x *= 1.1
+        pose.position.y -= abs(pose.position.x) * 0.03
+        pose.position.y -= 0.04
+        pose.position.y *= 1.2
+        #pose.position.z += 0.17
         pose.position.z += (distance - 0.19) * 0.2
         return pose
 
 
 def grab_up(node: MainNode, pose: Pose):
     node.arm_goal(name="gripper_open")
-    node.arm_goal(pose=pose)
-    pose.position.z -= 0.1
-    node.arm_goal(pose=pose)
+    while not node.arm_goal(pose=pose):
+        time.sleep(0.1)
+    pose.position.z -= 0.06
+    while not node.arm_goal(pose=pose):
+        time.sleep(0.1)
     node.arm_goal(name="gripper_close")
     node.arm_goal(name="detect")
 
 
 def put_down(node: MainNode, pose: Pose):
     pose.position.z += 0.05
-    node.arm_goal(pose=pose)
-    pose.position.z -= 0.1
-    node.arm_goal(pose=pose)
+    while not node.arm_goal(pose=pose):
+        time.sleep(0.1)
+    pose.position.z -= 0.06
+    while not node.arm_goal(pose=pose):
+        time.sleep(0.1)
     node.arm_goal(name="gripper_open")
+    pose.position.z += 0.1
+    while not node.arm_goal(pose=pose):
+        time.sleep(0.1)
     node.arm_goal(name="detect")
     node.arm_goal(name="gripper_close")
 
@@ -240,8 +254,6 @@ def main():
     rclpy.init()
     node = MainNode()
     node.create_rate(100)
-
-    platform_points = [PlatformCmd.LEFT, PlatformCmd.TOP, PlatformCmd.RIGHT]
 
     # init
     node.get_logger().info("Start in 3 sec")
@@ -287,11 +299,10 @@ def main2():
     node.arm_goal(name="detect")
     # node.audio.beep_ready()
     # node.button.wait_until_start()
-    time.sleep(1)
-    node.get_logger().info("Ready to receive command")
 
     # node.speech_recognition = 2
     while rclpy.ok():
+        node.get_logger().info("Ready to receive command")
         target_cube = str(node.spin_until_speech_cmd() - 2)  # map (1,5) to (-1,3)
         cube_status = node.get_cube_status(target_cube)
         skip_move = False
@@ -318,7 +329,10 @@ def main2():
             # platform move to cube
             if not skip_move:
                 node.platform_goal(cube_status)
-                node.update_cube_status_from_camera(cube_status, 5)
+                if not node.spin_until_cube_pose(target_cube, 5, 5):
+                    node.get_logger().error("failed to get grab up pose")
+                    continue
+                # node.update_cube_status_from_camera(cube_status, 5)
             # grab up
             pose = node.get_cube_pose(target_cube)
             grab_up(node, pose)
