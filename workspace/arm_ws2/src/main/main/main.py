@@ -100,7 +100,7 @@ class MainNode(Node):
             status = result.status
             time.sleep(0.2)
 
-    def arm_goal(self, name: str = "", pose: Pose = None) -> bool:
+    def arm_goal(self, name: str = "", pose: Pose = None) -> bool | None:
         self.get_logger().info("arm goal start")
         if pose is None:
             pose = Pose()
@@ -128,6 +128,8 @@ class MainNode(Node):
                     self.get_logger().info("Arm Goal finish")
                     if response.message == "":
                         return True
+                    elif response.message == "ik":
+                        return None
                     else:
                         return False
                 else:
@@ -216,26 +218,34 @@ class MainNode(Node):
         pose.position.z += 0.12
         pose.position.x -= 0.01
         pose.position.x *= 1.1
-        pose.position.y -= abs(pose.position.x) * 0.03
-        pose.position.y -= 0.04
-        pose.position.y *= 1.2
+        # pose.position.y -= abs(pose.position.x) * 0.03
+        pose.position.y -= 0.02
+        pose.position.y += (pose.position.y - 0.2) * 0.2
         #pose.position.z += 0.17
         pose.position.z += (distance - 0.19) * 0.2
         return pose
 
 
-def grab_up(node: MainNode, pose: Pose):
+def grab_up(node: MainNode, pose: Pose) -> bool:
     node.arm_goal(name="gripper_open")
-    while not node.arm_goal(pose=pose):
+    while True:
+        result = node.arm_goal(pose=pose)
+        if result is None:
+            return False
         time.sleep(0.1)
     pose.position.z -= 0.06
-    while not node.arm_goal(pose=pose):
-        time.sleep(0.1)
+    #while True:
+    #   result = node.arm_goal(pose=pose)
+    #   if result is None:
+    #       return False
+    #   time.sleep(0.1)
     node.arm_goal(name="gripper_close")
     node.arm_goal(name="detect")
+    return True
 
 
-def put_down(node: MainNode, pose: Pose):
+def put_down(node: MainNode, pose: Pose) -> bool:
+    return True
     pose.position.z += 0.05
     while not node.arm_goal(pose=pose):
         time.sleep(0.1)
@@ -248,6 +258,7 @@ def put_down(node: MainNode, pose: Pose):
         time.sleep(0.1)
     node.arm_goal(name="detect")
     node.arm_goal(name="gripper_close")
+    return True
 
 
 def main():
@@ -335,7 +346,9 @@ def main2():
                 # node.update_cube_status_from_camera(cube_status, 5)
             # grab up
             pose = node.get_cube_pose(target_cube)
-            grab_up(node, pose)
+            if not grab_up(node, pose):
+                node.get_logger().warn("grab up failed")
+                continue
             # platform move to unload
             node.platform_goal(PlatformCmd.UNLOAD)
             # put down
@@ -343,7 +356,8 @@ def main2():
                 node.get_logger().error("failed to get put down pose")
                 break
             pose = node.get_cube_pose(target_cube)
-            put_down(node, pose)
+            if not put_down(node, pose):
+                node.get_logger().error("put down failed")
             # update cube status
             node.set_cube_status_finish(target_cube)
     node.get_logger().info("all down")

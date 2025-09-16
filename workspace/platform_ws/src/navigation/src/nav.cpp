@@ -60,6 +60,7 @@ public:
         lidar_head_rad_ = this->get_parameter("lidar_head_deg").as_double() * M_PI / 180.0;
         avoidance_activation_dist_ = this->get_parameter("avoidance_activation_dist").as_double();
         final_approach_dist = this->get_parameter("final_approach_dist").as_double();
+        position_valid_count = 0;
 
         // TF listener and buffer
         tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
@@ -90,6 +91,7 @@ private:
         const std::shared_ptr<GoalRequest::Request> request,
         std::shared_ptr<GoalRequest::Response> response)
     {
+        position_valid_count = 0;
         goal_pose_ = request->goal_pose;
         state_ = NavState::NAVIGATING;
         response->success = true;
@@ -160,8 +162,11 @@ private:
         // Check if goal is reached
         if (state_ == NavState::NAVIGATING && dist_error < goal_dist_tolerance_)
         {
-            RCLCPP_INFO(this->get_logger(), "Goal reached!");
-            state_ = NavState::HEADING;
+            position_valid_count ++;
+            if (position_valid_count > 20) { 
+                RCLCPP_INFO(this->get_logger(), "Goal reached!");
+                state_ = NavState::HEADING;
+            }
             // stop_robot();
             // return;
         // Check if head reached
@@ -269,6 +274,7 @@ private:
     Twist last_cmd_vel_;
     sensor_msgs::msg::LaserScan::SharedPtr latest_scan_;
     std::mutex scan_mutex_;
+    int position_valid_count;
 
     // Parameters
     double kp_linear_, kp_angular_, kp_avoidance_;
